@@ -1,0 +1,183 @@
+---
+title: "Global Sanitation Coverage Report 2023"
+format:
+  html:
+    toc: true
+    code-fold: true
+    code-tools: true
+    code-summary: "Show Code"
+    embed-resources: true
+
+jupyter: python3
+---
+<span style="font-size:15px;"> **Author:** Palak Verma </span>
+
+##
+## 📚 Introduction 
+Access to safe sanitation is fundamental to human dignity, public health, and sustainable development. However, despite global efforts, billions of people worldwide still lack access to basic sanitation facilities. This report explores global trends in sanitation coverage for the year 2023, with a special focus on healthcare facilities and vulnerable populations.
+The analysis draws on recent data from UNICEF, the World Bank, and other credible sources. It highlights regional disparities, showcases successful countries, and identifies persistent challenges. Through data visualization and targeted insights, this report aims to support efforts toward achieving Sustainable Development Goal 6 (SDG 6): "Ensure availability and sustainable management of water and sanitation for all."
+
+## 📋 Key highlights
+- Uganda’s Progress: Uganda has shown gradual improvement in healthcare facility sanitation coverage over the years, although rural areas still lag.
+- Top Performing Countries: Several countries have achieved sanitation coverage levels exceeding 90% in healthcare facilities.
+- Global Inequality: A stark disparity remains between high-income and low-income countries, emphasizing the need for focused interventions.
+- Correlation Observed: A positive correlation is seen between a country's total population and investment in sanitation infrastructure.
+- Regional Trends: Sub-Saharan Africa continues to face significant sanitation access challenges compared to other regions.
+
+## 📦 Data Preparation
+
+```{python}
+import pandas as pd
+import plotly.express as px
+import altair as alt
+
+# Load datasets
+indicator = pd.read_csv("indicator_1.csv")
+metadata = pd.read_csv("metadata.csv")
+
+# Clean and merge
+indicator.columns = indicator.columns.str.strip()
+metadata.columns = metadata.columns.str.strip()
+merged = pd.merge(
+    indicator,
+    metadata[['country', 'Population, total']].rename(columns={'Population, total': 'population_total'}),
+    on='country',
+    how='left'
+)
+merged['time_period'] = merged['time_period'].astype(str)
+merged['country'] = merged['country'].str.strip()
+```
+
+---
+
+## 📈 Uganda: Sanitation Coverage Over Time
+**Purpose:** Shows how Uganda's sanitation coverage in healthcare facilities has evolved over multiple years.
+  **Insight:** Highlights steady improvements and areas needing stronger interventions.
+
+```{python}
+uganda_data = merged[
+    (merged['country'] == 'Uganda') &
+    (merged['indicator'] == 'Proportion of health care facilities with limited sanitation services')
+].copy()
+
+fig_uganda = px.line(
+    uganda_data,
+    x='time_period',
+    y='obs_value',
+    markers=True,
+    labels={'obs_value': 'Sanitation Coverage (%)', 'time_period': 'Year'},
+    title="📈 Uganda's Sanitation Coverage Over Time"
+)
+fig_uganda.show()
+```
+**About:** This chart shows that Uganda is progressing steadily toward improving sanitation coverage in healthcare facilities from 2016 to 2023.
+
+---
+
+## 🏆 Top 10 Countries by Sanitation Indicator (2023)
+**Purpose:** Ranks the top 10 countries based on their sanitation coverage in 2023.  
+**Insight:** Highlights best-performing nations that can serve as models for others.
+
+```{python}
+top10_df = merged[
+    (merged['time_period'] == '2023') &
+    (merged['indicator'] == 'Proportion of health care facilities with limited sanitation services')
+].dropna(subset=['obs_value'])
+
+avg_by_country = top10_df.groupby('country', as_index=False)['obs_value'].mean()
+top10 = avg_by_country.sort_values(by='obs_value', ascending=False).head(10)
+
+fig_top10 = px.bar(
+    top10,
+    x='obs_value',
+    y='country',
+    orientation='h',
+    color='obs_value',
+    text='obs_value',
+    color_continuous_scale='Blues',
+    title='🏆 Top 10 Countries with Best Sanitation Coverage (2023)',
+    labels={'obs_value': 'Sanitation Coverage (%)', 'country': 'Country'}
+)
+fig_top10.update_layout(yaxis={'categoryorder': 'total ascending'})
+fig_top10.show()
+```
+**About:** This bar chart highlights the countries that achieved the highest sanitation coverage in healthcare facilities in 2023, showing strong regional leadership.
+
+---
+
+## 🌍 Population vs Sanitation Coverage (Scatter Plot)
+**Purpose:** Explores the relationship between population size and sanitation coverage.  
+**Insight:** Reveals that both very large and very small populations present unique challenges.
+
+```{python}
+scatter_df = merged[
+    (merged['time_period'] == '2023') &
+    (merged['indicator'] == 'Proportion of health care facilities with limited sanitation services')
+].dropna(subset=['obs_value', 'population_total'])
+
+fig_scatter = alt.Chart(scatter_df).mark_circle(size=60).encode(
+    x=alt.X('population_total', title='Population'),
+    y=alt.Y('obs_value', title='Sanitation Coverage (%)'),
+    tooltip=['country', 'population_total', 'obs_value']
+).properties(
+    width=600,
+    height=400,
+    title="🌍 Population vs. Sanitation Coverage (2023)"
+).interactive()
+
+fig_scatter
+```
+**About:** Larger populations don't necessarily guarantee higher sanitation coverage, indicating the influence of governance and infrastructure investment.
+
+---
+
+## 🌐 Global Sanitation Indicator Map (2023)
+**Purpose:** Visually represents global sanitation coverage disparities across countries.  
+**Insight:** Helps identify geographic regions needing urgent intervention.
+
+```{python}
+map_df = merged[
+    (merged['time_period'] == '2023') &
+    (merged['indicator'] == 'Proportion of health care facilities with limited sanitation services')
+].dropna(subset=['obs_value'])
+
+map_avg = map_df.groupby('country', as_index=False)['obs_value'].mean()
+
+fig_map = px.choropleth(
+    map_avg,
+    locations="country",
+    locationmode="country names",
+    color="obs_value",
+    hover_name="country",
+    color_continuous_scale="YlGnBu",
+    labels={"obs_value": "Sanitation (%)"},
+    title="🌐 Global Sanitation Coverage in Healthcare Facilities (2023)"
+)
+fig_map.update_layout(geo=dict(showframe=False, showcoastlines=True))
+fig_map.show()
+```
+**About:** The global sanitation map visually highlights the disparity between countries, with several African and South Asian nations needing urgent improvements.
+
+---
+
+## 🚧 Challenges and Recommendations
+Challenges:
+
+- Funding Deficiencies: Many low-income countries lack the necessary financial support for sanitation improvements.
+- Urban-Rural Divide: Rural healthcare centers and communities remain disproportionately underserved.
+- Conflict Zones: Areas affected by war or instability suffer severe disruptions in basic sanitation services.
+- Data Gaps: Inconsistent reporting across countries hinders global monitoring efforts.
+
+Recommendations:
+
+- Targeted rural investments through international aid and national budgeting.
+- Promotion of affordable, decentralized sanitation technologies.
+- Integration of sanitation objectives into national healthcare and education policies.
+- Strengthening global monitoring and reporting mechanisms for sanitation progress.
+
+## ✅ Conclusion
+
+This report revealed global progress and challenges in sanitation coverage in healthcare facilities. Despite achievements, substantial investment is needed in many low and middle-income countries to meet global sanitation goals.
+
+##
+
